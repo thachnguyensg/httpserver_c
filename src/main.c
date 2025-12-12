@@ -1,4 +1,5 @@
 #include "main.h"
+#include "http.h"
 #include "tcp.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,19 @@ int main() {
   }
 
   debug_log("Client connected\n");
+
+  http_request request;
+  if (read_http_request(client_fd, &request) == -1) {
+    debug_log("Failed to read HTTP request\n");
+    close(client_fd);
+    close(server.socket_fd);
+    return EXIT_FAILURE;
+  }
+
+  printf("Received HTTP request:\n");
+  printf("Method: %s\n", request.method);
+  printf("Path: %s\n", request.path);
+  printf("Protocol: %s\n", request.protocol);
 
   close(client_fd);
   close(server.socket_fd);
