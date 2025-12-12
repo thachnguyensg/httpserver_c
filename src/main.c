@@ -1,0 +1,32 @@
+#include "main.h"
+#include "tcp.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main() {
+  debug_log("Debug mode is enabled.\n");
+
+  server_status_e status;
+  tcp_server server;
+
+  status = bind_tcp_port(&server, PORT);
+  if (status != SERVER_OK) {
+    fprintf(stderr, "Failed to bind TCP port: %d\n", status);
+    return EXIT_FAILURE;
+  }
+
+  int client_fd = accept_client(server.socket_fd);
+  if (client_fd == -1) {
+    fprintf(stderr, "Failed to accept client connection.\n");
+    close(server.socket_fd);
+    return EXIT_FAILURE;
+  }
+
+  debug_log("Client connected\n");
+
+  close(client_fd);
+  close(server.socket_fd);
+
+  return EXIT_SUCCESS;
+}
