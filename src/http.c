@@ -114,3 +114,114 @@ http_parse_e parse_http_request(const char *raw_request,
 
   return parse_http_headers(raw_request, request);
 }
+
+void init_http_response(http_response *response) {
+  response->status_code = 200;
+  strncpy(response->reason_phrase, "OK", HTTP_MAX_REASON_LEN - 1);
+  response->headers = NULL;
+  response->header_count = 0;
+  response->body = NULL;
+  response->body_length = 0;
+}
+
+void add_http_header(http_response *response, const char *key,
+                     const char *value) {
+  response->headers = realloc(
+      response->headers, sizeof(http_header_t) * (response->header_count + 1));
+  if (!response->headers) {
+    perror("realloc");
+    exit(EXIT_FAILURE);
+  }
+
+  strncpy(response->headers[response->header_count].key, key,
+          HTTP_MAX_HEADER_KEY_LEN - 1);
+  strncpy(response->headers[response->header_count].value, value,
+          HTTP_MAX_HEADER_VAL_LEN - 1);
+
+  response->header_count++;
+}
+
+void set_http_body(http_response *response, const char *body) {
+  if (response->body) {
+    free(response->body);
+  }
+
+  response->body_length = strlen(body);
+  response->body = malloc(response->body_length);
+  if (!response->body) {
+    perror("malloc");
+    exit(EXIT_FAILURE);
+  }
+  memcpy(response->body, body, response->body_length);
+}
+
+void free_http_response(http_response *response) {
+  if (response->headers) {
+    free(response->headers);
+    response->headers = NULL;
+  }
+  response->header_count = 0;
+
+  if (response->body) {
+    free(response->body);
+    response->body = NULL;
+  }
+  response->body_length = 0;
+}
+
+char *construct_http_response(const http_response *response,
+                              size_t *response_length) {
+  size_t buffer_size = 1024; // Initial size
+  char *buffer = malloc(buffer_size);
+
+  size_t offset = 0;
+  offset = snprintf(buffer, buffer_size, "HTTP/1.1 %d %s\r\n",
+                    response->status_code, response->reason_phrase);
+
+  for (size_t i = 0; i < response->header_count; i++) {
+    // trick to check required buffer size by passing NULL buffer and 0 length
+    // to snprintf
+    size_t header_length =
+        snprintf(NULL, 0, "%s: %s\r\n", response->headers[i].key,
+                 response->headers[i].value);
+    while (buffer_size - offset - header_length - 1 - 2 <= 0) {
+      buffer_size *= 2;
+      buffer = realloc(buffer, buffer_size);
+    }
+
+    offset += snprintf(buffer + offset, buffer_size - offset, "%s: %s\r\n",
+                       response->headers[i].key, response->headers[i].value);
+  }
+  offset += snprintf(buffer + offset, buffer_size - offset, "\r\n");
+
+  if (response->body) {
+    while (buffer_size - offset - 1 < response->body_length) {
+      buffer_size = offset + response->body_length;
+      buffer = realloc(buffer, buffer_size);
+    }
+
+    memcpy(buffer + offset, response->body, response->body_length);
+    offset += response->body_length;
+  }
+
+  *response_length = offset;
+  return buffer;
+}
+
+void send_http_response(int socket_fd, const http_response *response) {
+  size_t response_length;
+  char *response_buffer = construct_http_response(response, &response_length);
+
+  size_t total_sent = 0;
+  while (total_sent < response_length) {
+    ssize_t sent = send(socket_fd, response_buffer + total_sent,
+                        response_length - total_sent, 0);
+    if (sent <= 0) {
+      perror("send");
+      break;
+    }
+    total_sent += sent;
+  }
+
+  free(response_buffer);
+}
