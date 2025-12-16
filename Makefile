@@ -10,7 +10,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 
 TARGET = $(BIN_DIR)/myhttpd
 
-all: $(TARGET)
+all: $(TARGET) copy-www
 
 $(TARGET): $(OBJS) | $(BIN_DIR)
 	$(CC) $(CCFLAGS) -o $@ $^
@@ -27,4 +27,7 @@ $(BIN_DIR):
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR)
 
-.PHONY: all clean
+copy-www: | $(BIN_DIR)
+	cp -r www $(BIN_DIR)/
+
+.PHONY: all clean copy-www
