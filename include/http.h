@@ -60,4 +60,8 @@ char *construct_http_response(const http_response *response,
 void send_http_response(int socket_fd, const http_response *response);
 void set_http_body(http_response *response, const char *body);
 
+void sanitize_path(const char *requested_path, char *sanitized_path,
+                   size_t buffer_size);
+void serve_file(const char *path, http_response *response);
+
 #endif // HTTP_H

@@ -58,10 +58,10 @@ int main() {
     http_response response;
     init_http_response(&response);
 
-    add_http_header(&response, "Content-Type", "text/html");
-    add_http_header(&response, "Connection", "close");
-    set_http_body(&response,
-                  "<html><body><h1>Hello, World!</h1></body></html>");
+    char sanitized_path[1024];
+    sanitize_path(request.path, sanitized_path, sizeof(sanitized_path));
+
+    serve_file(sanitized_path, &response);
 
     send_http_response(client_fd, &response);
 
