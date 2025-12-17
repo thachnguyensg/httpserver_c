@@ -1,9 +1,26 @@
 #include "main.h"
 #include "http.h"
+#include "route.h"
 #include "tcp.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+bool handle_root(http_request *req, http_response *res) {
+  debug_log("handle_root called\n");
+  char sanitized_path[1024];
+  sanitize_path(req->path, sanitized_path, sizeof(sanitized_path));
+  serve_file(sanitized_path, res);
+  return true;
+}
+
+bool handle_hello(http_request *req, http_response *res) {
+  debug_log("handle_hello called\n");
+  char sanitized_path[1024];
+  sanitize_path("/hello.html", sanitized_path, sizeof(sanitized_path));
+  serve_file(sanitized_path, res);
+  return true;
+}
 
 int main() {
   debug_log("Debug mode is enabled.\n");
@@ -28,7 +45,7 @@ int main() {
     debug_log("Client connected\n");
 
     http_request request = {0};
-    if (read_http_request(client_fd, &request) == -1) {
+    if (read_http_request(client_fd, &request) == HTTP_PARSE_INVALID) {
       debug_log("Failed to read HTTP request\n");
       close(client_fd);
       close(server.socket_fd);
@@ -53,19 +70,20 @@ int main() {
       printf("%s: %s\n", request.headers[i].key, request.headers[i].value);
     }
 
-    free_http_headers(&request);
-
     http_response response;
     init_http_response(&response);
 
-    char sanitized_path[1024];
-    sanitize_path(request.path, sanitized_path, sizeof(sanitized_path));
+    route_data_t data = {0};
+    data.request = &request;
+    data.response = &response;
+    data.client_fd = client_fd;
 
-    serve_file(sanitized_path, &response);
+    handle_route("/hel", &handle_root, data);
+    handle_route("/hello", &handle_hello, data);
+    handle_route("/", &handle_root, data);
 
-    send_http_response(client_fd, &response);
-
-    free_http_response(&response);
+    free_http_headers(data.request);
+    free_http_response(data.response);
     close(client_fd);
     debug_log("Response sent and client disconnected\n");
   }
