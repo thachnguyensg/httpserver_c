@@ -1,10 +1,25 @@
 #include "http.h"
+#include "route.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+extern Route routes[];
+extern int route_count;
+
+bool handle_request(http_request *req, http_response *res) {
+  for (int i = 0; i < route_count; i++) {
+    if (routes[i].method == req->methode &&
+        strcmp(routes[i].path, req->path) == 0) {
+      routes[i].handler(req, res);
+      return true;
+    }
+  }
+  return false;
+}
 
 http_parse_e read_http_request(int socket_fd, http_request *request) {
   ssize_t bytes =

@@ -6,25 +6,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-void handle_route(const char *route,
-                  bool (*fn)(http_request *r, http_response *w),
-                  route_data_t data) {
+Route routes[MAX_ROUTE];
+int route_count = 0;
+
+int handle_route(http_method_e method, const char *route,
+                 void (*fn)(http_request *r, http_response *w)) {
 
   if (!fn) {
     debug_log("handle fn is NULL\n");
-    return;
-  }
-  debug_log("comparing route: %s | %s\n", route, data.request->path);
-  if (strcmp(route, data.request->path) != 0) {
-    return;
+    return route_count;
   }
 
-  if (!fn(data.request, data.response)) {
-    debug_log("Failed to handle route: %s\n", route);
-    return;
+  if (route_count < MAX_ROUTE) {
+    routes[route_count].method = method;
+    strcpy(routes[route_count].path, route);
+    routes[route_count].handler = fn;
+    route_count++;
   }
 
-  send_http_response(data.client_fd, data.response);
+  return route_count;
 }
 
 void sanitize_path(const char *requested_path, char *sanitized_path,

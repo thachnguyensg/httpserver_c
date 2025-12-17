@@ -61,6 +61,6 @@ void free_http_headers(http_request *request);
 http_parse_e read_http_request(int socket_fd, http_request *request);
 http_parse_e parse_http_headers(const char *raw_request, http_request *request);
 http_method_e http_method_to_enum(char *method);
-bool handle_root(http_request *req, http_response *res);
+bool handle_request(http_request *req, http_response *res);
 
 #endif // HTTP_H
