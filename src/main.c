@@ -1,4 +1,5 @@
 #include "main.h"
+#include "config.h"
 #include "http.h"
 #include "route.h"
 #include "tcp.h"
@@ -27,8 +28,14 @@ int main() {
 
   server_status_e status;
   tcp_server server;
+  ServerConfig server_config = {0};
 
-  status = bind_tcp_port(&server, PORT);
+  if (load_config(&server_config, "config.json") != 0) {
+    debug_log("Failed to load configuration.\n");
+    server_config.port = PORT;
+  }
+
+  status = bind_tcp_port(&server, server_config.port);
   if (status != SERVER_OK) {
     fprintf(stderr, "Failed to bind TCP port: %d\n", status);
     return EXIT_FAILURE;
